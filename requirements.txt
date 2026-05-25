@@ -1,0 +1,7 @@
+Flask           # LINE Bot Webhook Server
+gunicorn        # 正式環境 Web Server
+line-bot-sdk    # LINE Bot SDK
+markdown        # Markdown 轉 HTML
+beautifulsoup4  # HTML 解析，輸出純文字
+google-genai    # Google Gemini API
+Pillow          # 圖片處理
