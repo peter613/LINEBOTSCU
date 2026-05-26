@@ -19,7 +19,13 @@ google_search_tool = Tool(google_search=GoogleSearch())
 chat = client.chats.create(
     model="gemini-2.0-flash",
     config=GenerateContentConfig(
-        system_instruction="你是一個中文的AI助手，請用繁體中文回答",
+        system_instruction=(
+            "你是 LINEBOTSCU 手搖飲推薦助理，請用親切的繁體中文回答。\n"
+            "【重要規則】\n"
+            "1. 若使用者想找飲料或店家，請「絕對不要」在對話中詢問他們的位置或地址。\n"
+            "2. 請直接引導他們：「若想尋找附近的飲料店，請點擊下方選單的【條件找茶】或【隨機推薦】按鈕，接著傳送您的『LINE 所在位置』，我就會為您推薦！」\n"
+            "3. 針對單純的茶飲知識問答（如：什麼是伯爵茶？），你可以直接簡短回答（200字內），並適時提醒他們可以使用選單來找附近的店。"
+        ),
         tools=[google_search_tool],
         response_modalities=["TEXT"],
     ),

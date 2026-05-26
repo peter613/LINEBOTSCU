@@ -11,6 +11,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import requests
 
+from dotenv import load_dotenv
+load_dotenv()
+
 LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
 HEADERS = {
     "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}",
@@ -109,7 +112,7 @@ def delete_all_rich_menus() -> None:
 
 def generate_rich_menu_image() -> str:
     """
-    使用 Pillow 生成溫暖淡橘主題的 2×2 圖文選單圖片。
+    使用 Pillow 生成仿照設計圖的 2×2 圖文選單圖片（彩色框+文字）。
     回傳：圖片檔案路徑
     """
     try:
@@ -119,56 +122,43 @@ def generate_rich_menu_image() -> str:
         return ""
 
     W, H = 2500, 1686
-    img = Image.new("RGB", (W, H), color="#FFF4E6")
+    COLOR_BG = "#FDFBF5"  # 米白底色
+    COLOR_DIVIDER = "#9AB0C4"  # 灰藍色分隔線
+    COLOR_TEXT = "#2C1B10"     # 深咖啡字體
+    
+    img = Image.new("RGB", (W, H), color=COLOR_BG)
     draw = ImageDraw.Draw(img)
 
-    # 色彩定義
-    COLOR_ORANGE   = "#FF8C42"
-    COLOR_LIGHT    = "#FFB347"
-    COLOR_CREAM    = "#FFF4E6"
-    COLOR_BROWN    = "#5C3A1E"
-    COLOR_WHITE    = "#FFFFFF"
-    COLOR_DIVIDER  = "#FFD4A8"
-
-    # 畫四個格子
+    # 畫四個格子：圖示(暫代) / 標題
     cells = [
-        (0,    0,    1250, 843,  "🍵", "條件找茶",  "依喜好篩選飲品"),
-        (1250, 0,    2500, 843,  "🦭", "海豹隨機推", "隨機抽一杯"),
-        (0,    843,  1250, 1686, "🌟", "最新主打",  "當季新品資訊"),
-        (1250, 843,  2500, 1686, "📖", "使用說明",  "功能操作指南"),
+        (0,    0,    1250, 843,  "🔍", "條件找茶"),
+        (1250, 0,    2500, 843,  "🎲", "海豹隨機推"),
+        (0,    843,  1250, 1686, "🔥", "最新主打"),
+        (1250, 843,  2500, 1686, "⭐", "使用說明"),
     ]
 
-    for i, (x1, y1, x2, y2, icon, title, subtitle) in enumerate(cells):
+    try:
+        font_title = ImageFont.truetype("C:/Windows/Fonts/msjh.ttc", 80)
+        font_icon  = ImageFont.truetype("C:/Windows/Fonts/seguiemj.ttf", 350)
+    except Exception:
+        font_title = ImageFont.load_default()
+        font_icon  = font_title
+
+    for (x1, y1, x2, y2, icon, title) in cells:
         cx = (x1 + x2) // 2
         cy = (y1 + y2) // 2
 
-        # 交替背景
-        bg_color = COLOR_CREAM if i % 2 == 0 else "#FFF0E0"
-        draw.rectangle([x1, y1, x2, y2], fill=bg_color)
+        # icon（中央偏上）
+        draw.text((cx, cy - 100), icon, fill="#555555", font=font_icon, anchor="mm")
+        # 標題（中央偏下）
+        draw.text((cx, cy + 220), title, fill=COLOR_TEXT, font=font_title, anchor="mm")
 
-        # 橘色標題帶
-        draw.rectangle([x1, y1, x2, y1 + 80], fill=COLOR_ORANGE)
-
-        # 頂部橘色標題
-        try:
-            font_title = ImageFont.truetype("C:/Windows/Fonts/msjh.ttc", 52)
-            font_sub   = ImageFont.truetype("C:/Windows/Fonts/msjh.ttc", 36)
-            font_icon  = ImageFont.truetype("C:/Windows/Fonts/seguiemj.ttf", 120)
-        except Exception:
-            font_title = ImageFont.load_default()
-            font_sub   = font_title
-            font_icon  = font_title
-
-        # icon（中央）
-        draw.text((cx, cy - 80), icon, fill=COLOR_ORANGE, font=font_icon, anchor="mm")
-        # 標題
-        draw.text((cx, cy + 80), title, fill=COLOR_BROWN, font=font_title, anchor="mm")
-        # 副標題
-        draw.text((cx, cy + 160), subtitle, fill="#9E7A5A", font=font_sub, anchor="mm")
-
-    # 分隔線
-    draw.line([(1250, 0), (1250, H)], fill=COLOR_DIVIDER, width=4)
-    draw.line([(0, 843), (W, 843)], fill=COLOR_DIVIDER, width=4)
+    # 分隔線 (十字)
+    draw.line([(1250, 0), (1250, H)], fill=COLOR_DIVIDER, width=12)
+    draw.line([(0, 843), (W, 843)], fill=COLOR_DIVIDER, width=12)
+    
+    # 畫四周的邊框
+    draw.rectangle([0, 0, W, H], outline=COLOR_DIVIDER, width=12)
 
     # 儲存
     out_path = os.path.join(
