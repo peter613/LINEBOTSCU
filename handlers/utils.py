@@ -67,6 +67,7 @@ def query_drinks_from_ai(area: str, category: str, sweetness: str, count: int = 
         f"你是台灣手搖飲料推薦達人，使用 Google Search 搜尋。使用者位置：{area}。\n"
         f"請推薦 {count} 款在「{area}」附近可能找到的手搖飲品，"
         f"條件：類別={cat_str}，甜度={sw_str}。\n"
+        f"【重要：請嚴格使用繁體中文（台灣）回覆，絕對禁止使用簡體中文】\n"
         f"嚴格只回覆以下 JSON 格式，不要任何其他文字或說明：\n"
         f'[\n'
         f'  {{"shop": "店家名稱", "drink": "飲品名稱", "category": "類別", '
@@ -86,6 +87,7 @@ def query_new_products_from_ai(area: str, count: int = 4) -> list[dict]:
     prompt = (
         f"你是台灣手搖飲料達人，請用 Google Search 搜尋「{area}附近手搖飲料 最新 季節限定 新品」。\n"
         f"列出 {count} 款近期推出的新品或季節限定飲品。\n"
+        f"【重要：請嚴格使用繁體中文（台灣）回覆，絕對禁止使用簡體中文】\n"
         f"嚴格只回覆以下 JSON 格式，不要任何其他文字：\n"
         f'[\n'
         f'  {{"shop": "店家名稱", "drink": "飲品名稱", "category": "類別", '
