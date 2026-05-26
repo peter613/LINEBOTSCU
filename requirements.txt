@@ -5,3 +5,5 @@ markdown        # Markdown 轉 HTML
 beautifulsoup4  # HTML 解析，輸出純文字
 google-genai    # Google Gemini API
 Pillow          # 圖片處理
+supabase        # Supabase Python Client
+python-dotenv   # 本地開發讀取 .env 檔案
