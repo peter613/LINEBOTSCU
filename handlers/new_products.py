@@ -113,7 +113,7 @@ def _query_brand_new(area: str, brand: str, address: str) -> list[dict]:
         f"搜尋「{location_str}」走路5分鐘內可到的「{brand}」最新3款飲品。\n"
         f"必須是非常近的店家。繁體中文，僅回JSON："
         f'[{{"shop":"{brand}","drink":"品名","category":"類別",'
-        f'"tags":["新品"],"description":"特色"}}]'
+        f'"price":"價格，例如 65元","tags":["新品"],"description":"特色"}}]'
     )
     raw = tea_query(prompt)
 

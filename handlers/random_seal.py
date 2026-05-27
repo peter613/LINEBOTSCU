@@ -107,7 +107,7 @@ def _show_popular(event, area: str, ctx: dict) -> None:
         _fallback_ai(event, area, ctx.get("address", ""), "不限")
         return
 
-    drinks = get_popular_drinks(limit=20)
+    drinks = get_popular_drinks(area=area, limit=20)
     chosen = _weighted_choice(drinks)
     _reply_seal_card(event, chosen, ctx, mode_label="🔥 最熱門推薦")
 
@@ -118,7 +118,7 @@ def _show_by_category(event, area: str, ctx: dict, category: str | None) -> None
         _fallback_ai(event, area, ctx.get("address", ""), category or "不限")
         return
 
-    drinks = get_popular_drinks_by_category(category, limit=15)
+    drinks = get_popular_drinks_by_category(category, area=area, limit=15)
     if not drinks:
         _fallback_ai(event, area, ctx.get("address", ""), category)
         return
@@ -157,6 +157,7 @@ def _reply_seal_card(event, drink: dict, ctx: dict, mode_label: str) -> None:
     """回傳海豹推薦 Flex Message。"""
     tags_list = drink.get("tags") or []
     tags_str  = "  ".join([f"#{t}" for t in tags_list[:4]])
+    price_text = drink.get("price") or drink.get("price_text") or ""
 
     # 存 pending 以供 postback 選擇
     ctx["pending_drinks"] = [drink]
@@ -183,8 +184,11 @@ def _reply_seal_card(event, drink: dict, ctx: dict, mode_label: str) -> None:
             "layout": "vertical",
             "spacing": "md",
             "contents": [
-                {"type": "text", "text": drink.get("drink_name", ""), "size": "xxl", "weight": "bold", "color": "#5C3A1E", "wrap": True},
-                {"type": "text", "text": f"🏪 {drink.get('shop_name', '')}", "size": "md", "color": "#FF8C42", "weight": "bold"},
+                    {"type": "text", "text": drink.get("drink_name", ""), "size": "xxl", "weight": "bold", "color": "#5C3A1E", "wrap": True},
+                    {"type": "text", "text": f"🏪 {drink.get('shop_name', '')}", "size": "md", "color": "#FF8C42", "weight": "bold"},
+                    # 價格顯示（若有）
+                    {"type": "text", "text": (f"💲 {int(drink.get('price'))} 元" if isinstance(drink.get('price'), (int, float)) and float(drink.get('price')).is_integer() else (f"💲 {drink.get('price')} 元" if drink.get('price') else "")), "size": "sm", "color": "#5C3A1E"},
+                ] + ([{"type": "text", "text": price_text, "size": "sm", "color": "#B04632", "weight": "bold"}] if price_text else []) + [
                 {"type": "separator", "color": "#FFE0C0"},
                 {
                     "type": "box", "layout": "horizontal", "spacing": "sm",

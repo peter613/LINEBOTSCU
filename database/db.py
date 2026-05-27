@@ -36,6 +36,7 @@ def upsert_drink(
     category: str,
     tags: list[str],
     area: str,
+    price: float | None = None,
 ) -> dict:
     """
     新增或更新飲品紀錄。
@@ -46,24 +47,31 @@ def upsert_drink(
     sb = get_client()
     now = datetime.now(timezone.utc).isoformat()
 
+    # 使用 shop_name + drink_name + area 作為唯一鍵，避免不同地點被覆蓋
     res = (
         sb.table("drinks")
         .select("id, select_count")
         .eq("shop_name", shop_name)
         .eq("drink_name", drink_name)
+        .eq("area", area)
         .execute()
     )
 
     if res.data:
         row_id = res.data[0]["id"]
-        new_count = res.data[0]["select_count"] + 1
-        sb.table("drinks").update({
+        new_count = res.data[0].get("select_count", 0) + 1
+        payload = {
             "select_count": new_count,
             "updated_at": now,
-        }).eq("id", row_id).execute()
+        }
+        # 若有提供價格則一併更新
+        if price is not None:
+            payload["price"] = price
+
+        sb.table("drinks").update(payload).eq("id", row_id).execute()
         logger.info("Updated drink '%s' @ '%s', count=%d", drink_name, shop_name, new_count)
     else:
-        sb.table("drinks").insert({
+        row = {
             "shop_name":    shop_name,
             "drink_name":   drink_name,
             "category":     category,
@@ -72,7 +80,11 @@ def upsert_drink(
             "select_count": 1,
             "created_at":   now,
             "updated_at":   now,
-        }).execute()
+        }
+        if price is not None:
+            row["price"] = price
+
+        sb.table("drinks").insert(row).execute()
         logger.info("Inserted new drink '%s' @ '%s'", drink_name, shop_name)
 
     return {"shop_name": shop_name, "drink_name": drink_name}
@@ -91,17 +103,23 @@ def get_popular_drinks(limit: int = 20) -> list[dict]:
     return res.data or []
 
 
-def get_popular_drinks_by_category(category: str, limit: int = 15) -> list[dict]:
+def get_popular_drinks_by_category(category: str, area: str | None = None, limit: int = 15) -> list[dict]:
     """依類別篩選後，依 select_count 降序取得飲品。"""
     sb = get_client()
-    res = (
-        sb.table("drinks")
-        .select("*")
-        .eq("category", category)
-        .order("select_count", desc=True)
-        .limit(limit)
-        .execute()
-    )
+    q = sb.table("drinks").select("*").eq("category", category)
+    if area:
+        q = q.eq("area", area)
+    res = q.order("select_count", desc=True).limit(limit).execute()
+    return res.data or []
+
+
+def get_popular_drinks(area: str | None = None, limit: int = 20) -> list[dict]:
+    """取得熱門飲品，若提供 area 則以該地區為篩選條件（否則回傳全域熱門）。"""
+    sb = get_client()
+    q = sb.table("drinks").select("*")
+    if area:
+        q = q.eq("area", area)
+    res = q.order("select_count", desc=True).limit(limit).execute()
     return res.data or []
 
 
