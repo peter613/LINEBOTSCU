@@ -13,6 +13,7 @@ import random
 
 from linebot.v3.messaging import (
     ApiClient,
+    FlexContainer,
     FlexMessage,
     MessageAction,
     MessagingApi,
@@ -225,7 +226,7 @@ def _reply_seal_card(event, drink: dict, ctx: dict, mode_label: str) -> None:
         MessagingApi(api_client).reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[FlexMessage(alt_text=f"🦭 推薦：{drink.get('drink_name', '')}", contents=flex_content)],
+                messages=[FlexMessage(alt_text=f"🦭 推薦：{drink.get('drink_name', '')}", contents=FlexContainer.from_dict(flex_content))],
             )
         )
 

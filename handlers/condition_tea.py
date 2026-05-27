@@ -11,6 +11,7 @@ import logging
 
 from linebot.v3.messaging import (
     ApiClient,
+    FlexContainer,
     MessageAction,
     MessagingApi,
     QuickReply,
@@ -94,7 +95,7 @@ def on_sweetness_selected(event, user_id: str, ctx: dict, user_input: str) -> No
                 reply_token=event.reply_token,
                 messages=[
                     TextMessage(text=f"🍵 為您在「{area}」找到 {len(drinks)} 款推薦飲品，請點選您喜歡的："),
-                    FlexMessage(alt_text="飲品推薦選項", contents=carousel),
+                    FlexMessage(alt_text="飲品推薦選項", contents=FlexContainer.from_dict(carousel)),
                 ],
             )
         )

@@ -11,6 +11,7 @@ import logging
 
 from linebot.v3.messaging import (
     ApiClient,
+    FlexContainer,
     FlexMessage,
     MessagingApi,
     ReplyMessageRequest,
@@ -85,7 +86,7 @@ def on_location_received(event, user_id: str, lat: float, lng: float, address: s
                 reply_token=event.reply_token,
                 messages=[
                     TextMessage(text=f"{header}，共 {len(drinks)} 款，點選喜歡的記錄下來！"),
-                    FlexMessage(alt_text="最新主打飲品", contents=carousel),
+                    FlexMessage(alt_text="最新主打飲品", contents=FlexContainer.from_dict(carousel)),
                 ],
             )
         )

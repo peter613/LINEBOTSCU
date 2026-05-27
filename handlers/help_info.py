@@ -6,6 +6,7 @@ import logging
 
 from linebot.v3.messaging import (
     ApiClient,
+    FlexContainer,
     FlexMessage,
     MessagingApi,
     ReplyMessageRequest,
@@ -182,7 +183,7 @@ def handle_help_info(event) -> None:
                 messages=[
                     FlexMessage(
                         alt_text="LINEBOTSCU 使用說明",
-                        contents=flex_content,
+                        contents=FlexContainer.from_dict(flex_content),
                     )
                 ],
             )
