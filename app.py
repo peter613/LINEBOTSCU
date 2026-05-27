@@ -84,14 +84,12 @@ def _handle_select_drink(event, user_id: str, params: dict) -> None:
     shop_name  = drink.get("shop_name") or drink.get("shop", "未知店家")
     drink_name = drink.get("drink_name") or drink.get("drink", "未知飲品")
     category   = drink.get("category", "")
-    sweetness  = drink.get("sweetness", "")
     tags       = drink.get("tags") or []
 
     upsert_drink(
         shop_name=shop_name,
         drink_name=drink_name,
         category=category,
-        sweetness=sweetness,
         tags=tags,
         area=area,
     )

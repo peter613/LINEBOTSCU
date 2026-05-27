@@ -57,10 +57,10 @@ def on_location_received(event, user_id: str, lat: float, lng: float, address: s
     target_brand = ctx.get("target_brand")
 
     if target_brand:
-        drinks = _query_brand_new(area, target_brand)
+        drinks = _query_brand_new(area, target_brand, address)
         header = f"🏪 {target_brand} × {area} 最新主打"
     else:
-        drinks = query_new_products_from_ai(area, count=4)
+        drinks = query_new_products_from_ai(area, address=address, count=4)
         header = f"🌟 {area} 附近當季新品"
 
     if not drinks:
@@ -103,15 +103,17 @@ def _extract_brand(text: str) -> str | None:
     return None
 
 
-def _query_brand_new(area: str, brand: str) -> list[dict]:
+def _query_brand_new(area: str, brand: str, address: str) -> list[dict]:
     """精準查詢特定品牌的最新商品。"""
     from gemini_client import tea_query
     import json, re
 
+    location_str = address if address else area
     prompt = (
-        f"搜尋{brand}在{area}最新3款飲品。繁體中文，僅回JSON："
+        f"搜尋「{location_str}」走路5分鐘內可到的「{brand}」最新3款飲品。\n"
+        f"必須是非常近的店家。繁體中文，僅回JSON："
         f'[{{"shop":"{brand}","drink":"品名","category":"類別",'
-        f'"sweetness":"甜度或不限","tags":["新品"],"description":"特色"}}]'
+        f'"tags":["新品"],"description":"特色"}}]'
     )
     raw = tea_query(prompt)
 

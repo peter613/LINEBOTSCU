@@ -1,11 +1,10 @@
 """
-LINEBOTSCU - 功能 1：條件找茶（新版）
+LINEBOTSCU - 功能 1：條件找茶
 流程：
   1. 觸發 → 請傳位置（LocationAction Quick Reply）
   2. 收到位置 → 詢問類別（Quick Reply）
-  3. 詢問甜度（Quick Reply）
-  4. AI 搜尋附近符合飲品 → Flex Carousel
-  5. 使用者點「✅ 選這個」→ 存入 DB
+  3. 使用者選擇類別 → AI 搜尋附近飲品 → Flex Carousel
+  4. 使用者點「✅ 選這個」→ 存入 DB
 """
 import logging
 
@@ -24,8 +23,7 @@ from linebot.v3.messaging import (
 from config import line_configuration
 from handlers.states import (
     STATE_ASK_LOCATION, STATE_COND_ASK_CATEGORY,
-    STATE_COND_ASK_SWEETNESS, FEATURE_CONDITION,
-    CATEGORIES, SWEETNESSES,
+    FEATURE_CONDITION, CATEGORIES,
 )
 from handlers.utils import ask_for_location, query_drinks_from_ai, make_drink_carousel
 from database.db import set_user_session
@@ -53,23 +51,15 @@ def on_location_received(event, user_id: str, lat: float, lng: float, address: s
 
 
 def on_category_selected(event, user_id: str, ctx: dict, user_input: str) -> None:
-    """使用者選擇類別後，詢問甜度。"""
+    """使用者選擇類別後，直接呼叫 AI 並顯示結果。"""
     category = user_input if user_input in CATEGORIES else "不限"
     ctx["category"] = category
-    set_user_session(user_id, STATE_COND_ASK_SWEETNESS, ctx)
-    _ask_sweetness(event)
-
-
-def on_sweetness_selected(event, user_id: str, ctx: dict, user_input: str) -> None:
-    """使用者選擇甜度後，呼叫 AI 並顯示結果。"""
-    sweetness = user_input if user_input in SWEETNESSES else "不限"
-    ctx["sweetness"] = sweetness
 
     area     = ctx.get("area", ctx.get("address", "台灣"))
-    category = ctx.get("category", "不限")
+    address  = ctx.get("address", "")
 
     # 呼叫 AI 取得飲品選項
-    drinks = query_drinks_from_ai(area, category, sweetness, count=3)
+    drinks = query_drinks_from_ai(area, category, address=address, count=3)
 
     if not drinks:
         from database.db import reset_user_session
@@ -119,28 +109,14 @@ def _ask_category(event) -> None:
         )
 
 
-def _ask_sweetness(event) -> None:
-    items = [QuickReplyItem(action=MessageAction(label=s, text=s)) for s in SWEETNESSES]
-    with ApiClient(line_configuration) as api_client:
-        MessagingApi(api_client).reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(
-                    text="🍬 您偏好哪種甜度？",
-                    quick_reply=QuickReply(items=items),
-                )],
-            )
-        )
-
-
 def _extract_area(address: str) -> str:
-    """從完整地址萃取縣市＋區域（前兩段）。"""
+    """從完整地址萃取縣市＋區域＋里/路（更精確定位）。"""
     if not address:
         return "台灣"
-    parts = address.replace("台灣", "").strip()
-    # 嘗試取縣市+區（如：台北市中山區）
     import re
-    match = re.match(r"(.{2,4}[市縣]).{0,1}(.{2,4}[區鄉鎮市])?", parts)
+    parts = address.replace("台灣", "").strip()
+    # 嘗試取到路/街層級（如：台北市中山區南京東路）
+    match = re.match(r"(.{2,4}[市縣]).{0,1}(.{2,4}[區鄉鎮市])(.{2,6}[路街道])?", parts)
     if match:
         return "".join(filter(None, match.groups()))
-    return parts[:6] if len(parts) > 6 else parts
+    return parts[:10] if len(parts) > 10 else parts

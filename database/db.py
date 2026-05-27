@@ -34,7 +34,6 @@ def upsert_drink(
     shop_name: str,
     drink_name: str,
     category: str,
-    sweetness: str,
     tags: list[str],
     area: str,
 ) -> dict:
@@ -68,7 +67,6 @@ def upsert_drink(
             "shop_name":    shop_name,
             "drink_name":   drink_name,
             "category":     category,
-            "sweetness":    sweetness,
             "tags":         tags,
             "area":         area,
             "select_count": 1,

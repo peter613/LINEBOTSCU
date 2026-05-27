@@ -9,7 +9,7 @@ STATE_ASK_LOCATION = "ASK_LOCATION"       # 等待使用者傳位置（所有功
 
 # 條件找茶專用
 STATE_COND_ASK_CATEGORY  = "CONDITION_ASK_CATEGORY"
-STATE_COND_ASK_SWEETNESS = "CONDITION_ASK_SWEETNESS"
+
 
 # 隨機推專用
 STATE_RANDOM_ASK_MODE     = "RANDOM_ASK_MODE"      # 等待選擇模式（熱門/類別）
@@ -22,4 +22,4 @@ FEATURE_NEW       = "new_products"
 
 # 飲品類別選項
 CATEGORIES  = ["果茶", "奶茶", "鮮奶茶", "茶類", "特調", "不限"]
-SWEETNESSES = ["無糖", "微糖", "半糖", "全糖", "不限"]
+

@@ -15,7 +15,6 @@ CREATE TABLE drinks (
     shop_name    TEXT NOT NULL,          -- 店家名稱（AI 提供）
     drink_name   TEXT NOT NULL,          -- 飲品名稱（AI 提供）
     category     TEXT,                   -- 果茶 / 奶茶 / 鮮奶茶 / 茶類 / 特調
-    sweetness    TEXT,                   -- 無糖 / 微糖 / 半糖 / 全糖
     tags         TEXT[],                 -- 標籤陣列
     area         TEXT,                   -- 所在區域（如：台北市中山區）
     select_count INTEGER DEFAULT 1,      -- 被使用者選擇次數（熱門度）

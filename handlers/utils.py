@@ -54,35 +54,36 @@ def ask_for_location(event, feature_label: str = "推薦") -> None:
 # Gemini 結構化查詢
 # ─────────────────────────────────────────
 
-def query_drinks_from_ai(area: str, category: str, sweetness: str, count: int = 3) -> list[dict]:
+def query_drinks_from_ai(area: str, category: str, address: str = "", count: int = 3) -> list[dict]:
     """
     請 Gemini 以 JSON 格式推薦飲品。
-    回傳：[{"shop": ..., "drink": ..., "category": ..., "sweetness": ..., "tags": [...], "description": ...}]
+    回傳：[{"shop": ..., "drink": ..., "category": ..., "tags": [...], "description": ...}]
     解析失敗時回傳空 list。
     """
     cat_str = category if category and category != "不限" else "任何類別"
-    sw_str  = sweetness if sweetness and sweetness != "不限" else "任何甜度"
+    location_str = address if address else area
 
     prompt = (
-        f"推薦{count}款{area}附近手搖飲，類別={cat_str}，甜度={sw_str}。"
-        f"繁體中文，僅回JSON："
+        f"推薦{count}款在「{location_str}」走路5分鐘內可到的手搖飲，類別={cat_str}。"
+        f"必須是非常近的店家。繁體中文，僅回JSON："
         f'[{{"shop":"店名","drink":"品名","category":"類別",'
-        f'"sweetness":"甜度","tags":["標籤"],"description":"特色",'
+        f'"tags":["標籤"],"description":"特色",'
         f'"image_url":"圖片URL或null"}}]'
     )
     raw = tea_query(prompt)
     return _parse_json_list(raw)
 
 
-def query_new_products_from_ai(area: str, count: int = 4) -> list[dict]:
+def query_new_products_from_ai(area: str, address: str = "", count: int = 4) -> list[dict]:
     """
     請 Gemini 搜尋附近店家當季新品（JSON 格式）。
     """
+    location_str = address if address else area
     prompt = (
-        f"搜尋{area}附近手搖飲{count}款最新/季節限定新品。"
-        f"繁體中文，僅回JSON："
+        f"搜尋「{location_str}」走路5分鐘內可到的手搖飲{count}款最新/季節限定新品。"
+        f"必須是非常近的店家。繁體中文，僅回JSON："
         f'[{{"shop":"店名","drink":"品名","category":"類別",'
-        f'"sweetness":"甜度或不限","tags":["新品"],"description":"特色",'
+        f'"tags":["新品"],"description":"特色",'
         f'"image_url":"圖片URL或null"}}]'
     )
     raw = tea_query(prompt)
@@ -175,7 +176,7 @@ def make_drink_carousel(drinks: list[dict], area: str) -> dict:
                 },
                 {
                     "type": "text",
-                    "text": f"{d.get('category', '')}  ·  {d.get('sweetness', '')}",
+                    "text": f"{d.get('category', '')}",
                     "size": "sm",
                     "color": "#9E7A5A",
                 },

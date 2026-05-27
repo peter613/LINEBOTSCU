@@ -28,10 +28,10 @@ from database.db import get_user_session, reset_user_session
 
 from handlers.states import (
     STATE_ASK_LOCATION,
-    STATE_COND_ASK_CATEGORY, STATE_COND_ASK_SWEETNESS,
+    STATE_COND_ASK_CATEGORY,
     STATE_RANDOM_ASK_MODE, STATE_RANDOM_ASK_CATEGORY,
     FEATURE_CONDITION, FEATURE_RANDOM, FEATURE_NEW,
-    CATEGORIES, SWEETNESSES,
+    CATEGORIES,
 )
 import handlers.condition_tea as condition_tea
 import handlers.random_seal   as random_seal
@@ -99,9 +99,7 @@ def handle_text_message(event):
         condition_tea.on_category_selected(event, user_id, ctx, user_input)
         return
 
-    if state == STATE_COND_ASK_SWEETNESS:
-        condition_tea.on_sweetness_selected(event, user_id, ctx, user_input)
-        return
+
 
     if state == STATE_RANDOM_ASK_MODE:
         random_seal.on_mode_selected(event, user_id, ctx, user_input)

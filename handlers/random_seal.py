@@ -47,6 +47,7 @@ def trigger(event, user_id: str) -> None:
 
 def on_location_received(event, user_id: str, lat: float, lng: float, address: str) -> None:
     """收到位置後，詢問推薦模式。"""
+    from handlers.condition_tea import _extract_area
     ctx = {
         "feature": FEATURE_RANDOM,
         "lat":     lat,
@@ -103,7 +104,7 @@ def on_reroll(event, user_id: str) -> None:
 def _show_popular(event, area: str, ctx: dict) -> None:
     """最熱門模式：從全部 DB 依 select_count 加權抽選。"""
     if is_drinks_empty():
-        _fallback_ai(event, area, "不限", "不限")
+        _fallback_ai(event, area, ctx.get("address", ""), "不限")
         return
 
     drinks = get_popular_drinks(limit=20)
@@ -114,12 +115,12 @@ def _show_popular(event, area: str, ctx: dict) -> None:
 def _show_by_category(event, area: str, ctx: dict, category: str | None) -> None:
     """依類別模式：篩選後加權抽選。"""
     if is_drinks_empty() or not category:
-        _fallback_ai(event, area, category or "不限", "不限")
+        _fallback_ai(event, area, ctx.get("address", ""), category or "不限")
         return
 
     drinks = get_popular_drinks_by_category(category, limit=15)
     if not drinks:
-        _fallback_ai(event, area, category, "不限")
+        _fallback_ai(event, area, ctx.get("address", ""), category)
         return
 
     ctx["category"] = category
@@ -127,9 +128,9 @@ def _show_by_category(event, area: str, ctx: dict, category: str | None) -> None
     _reply_seal_card(event, chosen, ctx, mode_label=f"🍵 {category}類推薦")
 
 
-def _fallback_ai(event, area: str, category: str, sweetness: str) -> None:
+def _fallback_ai(event, area: str, address: str, category: str) -> None:
     """DB 空或無資料時，AI 直接推薦一款（不存入 DB）。"""
-    drinks = query_drinks_from_ai(area, category, sweetness, count=1)
+    drinks = query_drinks_from_ai(area, category, address, count=1)
     if not drinks:
         _reply_text(event, "🦭 今天找不到推薦，請先用「條件找茶」選幾杯積累資料吧！")
         return
@@ -140,7 +141,7 @@ def _fallback_ai(event, area: str, category: str, sweetness: str) -> None:
         f"🦭 海豹 AI 直接推薦（還沒有足夠資料）：\n\n"
         f"🏪 {d.get('shop', '')}\n"
         f"🍵 {d.get('drink', '')}\n"
-        f"類別：{d.get('category', '')}  甜度：{d.get('sweetness', '')}\n\n"
+        f"類別：{d.get('category', '')}\n\n"
         f"{d.get('description', '')}\n\n"
         f"💡 使用「條件找茶」選擇飲品後，隨機推薦會更準確喔！"
     )
@@ -189,7 +190,6 @@ def _reply_seal_card(event, drink: dict, ctx: dict, mode_label: str) -> None:
                     "type": "box", "layout": "horizontal", "spacing": "sm",
                     "contents": [
                         {"type": "text", "text": f"🍵 {drink.get('category', '')}", "size": "sm", "color": "#9E7A5A", "flex": 1},
-                        {"type": "text", "text": f"🍬 {drink.get('sweetness', '')}", "size": "sm", "color": "#9E7A5A", "flex": 1},
                     ],
                 },
                 {"type": "text", "text": tags_str, "size": "xs", "color": "#C97C3A", "wrap": True},
@@ -268,12 +268,4 @@ def _reply_text(event, text: str) -> None:
         )
 
 
-def _extract_area(address: str) -> str:
-    import re
-    if not address:
-        return "台灣"
-    parts = address.replace("台灣", "").strip()
-    match = re.match(r"(.{2,4}[市縣]).{0,1}(.{2,4}[區鄉鎮市])?", parts)
-    if match:
-        return "".join(filter(None, match.groups()))
-    return parts[:6] if len(parts) > 6 else parts
+
