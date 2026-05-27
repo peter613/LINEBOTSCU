@@ -108,10 +108,9 @@ def _query_brand_new(area: str, brand: str) -> list[dict]:
     import json, re
 
     prompt = (
-        f"請用 Google Search 搜尋「{brand}」在「{area}」最新推出的飲品或季節限定商品。\n"
-        f"列出 3 款，嚴格只回覆 JSON 格式，不要其他文字：\n"
-        f'[{{"shop": "{brand}", "drink": "飲品名稱", "category": "類別", '
-        f'"sweetness": "甜度（不確定填不限）", "tags": ["新品"], "description": "一句話特色描述"}}]'
+        f"搜尋{brand}在{area}最新3款飲品。繁體中文，僅回JSON："
+        f'[{{"shop":"{brand}","drink":"品名","category":"類別",'
+        f'"sweetness":"甜度或不限","tags":["新品"],"description":"特色"}}]'
     )
     raw = tea_query(prompt)
 

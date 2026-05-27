@@ -131,7 +131,7 @@ def handle_help_info(event) -> None:
                         },
                         {
                             "type": "text",
-                            "text": "直接輸入任何問題，AI 助手會回答你！\n輸入「AI 描述」可生成 AI 圖片。",
+                            "text": "直接輸入任何問題，AI 助手會回答你！",
                             "size": "sm",
                             "color": "#5C3A1E",
                             "wrap": True,

@@ -14,8 +14,6 @@ from config import line_configuration, static_tmp_path, webhook_handler
 
 # === 載入各訊息處理器 ===
 import text_handler   # noqa: F401  (含 LocationMessage handler)
-import image_handler  # noqa: F401
-import video_handler  # noqa: F401
 
 app = Flask(__name__)
 logging.basicConfig(

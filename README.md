@@ -9,16 +9,15 @@ pinned: false
 
 # LINEBOTSCU — 東吳大學資料系 LINE Bot
 
-整合 Google Gemini AI 的 LINE Bot，支援文字對話、AI 圖片生成、圖片解析與影片解析。
+整合 Google Gemini AI 的 LINE Bot，支援文字對話與手搖飲推薦。
 
 ## 功能
 
 | 功能 | 使用方式 |
 |------|---------|
 | 文字問答 (多輪對話) | 直接傳送任何文字 |
-| AI 圖片生成 | 傳送 `AI <描述>` |
-| 圖片解析 (面相/手相) | 傳送圖片 |
-| 影片內容說明 | 傳送影片 |
+
+
 
 ## 環境變數
 
@@ -38,9 +37,7 @@ LINEBOTSCU/
 ├── app.py              # Flask 主程式 + 路由
 ├── config.py           # LINE 憑證與共用設定
 ├── gemini_client.py    # Gemini AI 初始化與 query 函式
-├── text_handler.py     # 文字訊息處理 (含 AI 生圖)
-├── image_handler.py    # 圖片訊息處理
-├── video_handler.py    # 影片訊息處理
+├── text_handler.py     # 文字訊息處理
 ├── Dockerfile          # 容器部署設定
 └── requirements.txt    # Python 套件
 ```
