@@ -85,6 +85,25 @@ def _handle_select_drink(event, user_id: str, params: dict) -> None:
     drink_name = drink.get("drink_name") or drink.get("drink", "未知飲品")
     category   = drink.get("category", "")
     tags       = drink.get("tags") or []
+    # 嘗試解析價格（可能是數字或字串）
+
+    price_raw = drink.get("price") or drink.get("price_value") or drink.get("price_text")
+    price = None
+    if price_raw is not None:
+        try:
+            # 若為字串，移除非數字字元後轉 float
+            import re
+            if isinstance(price_raw, str):
+                cleaned = re.sub(r"[^0-9.]", "", price_raw)
+                price = float(cleaned) if cleaned else None
+            else:
+                price = float(price_raw)
+        except Exception:
+            price = None
+
+    # 若價格來源為 AI，則不自動存入 DB，以避免 hallucination
+    price_source = drink.get("price_source")
+    price_to_store = price if price_source != "ai" else None
 
     upsert_drink(
         shop_name=shop_name,
@@ -92,9 +111,19 @@ def _handle_select_drink(event, user_id: str, params: dict) -> None:
         category=category,
         tags=tags,
         area=area,
+        price=price_to_store,
     )
 
     reset_user_session(user_id)
+
+    # 準備回覆文字，包含價格（若有）—若為 AI 提供則標註為估計且未存入 DB
+    if price is not None:
+        if price_source == "ai":
+            price_line = f"\n💲 {int(price) if float(price).is_integer() else price} 元（AI 估計，未存入資料庫）"
+        else:
+            price_line = f"\n💲 {int(price) if float(price).is_integer() else price} 元"
+    else:
+        price_line = ""
 
     with ApiClient(line_configuration) as api_client:
         MessagingApi(api_client).reply_message(
@@ -104,7 +133,7 @@ def _handle_select_drink(event, user_id: str, params: dict) -> None:
                     text=(
                         f"✅ 已記錄！\n\n"
                         f"🏪 {shop_name}\n"
-                        f"🍵 {drink_name}\n\n"
+                        f"🍵 {drink_name}{price_line}\n\n"
                         f"下次「🦭 隨機推」會把它列入候選喔！"
                     )
                 )],

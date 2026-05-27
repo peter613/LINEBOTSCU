@@ -67,11 +67,13 @@ def query_drinks_from_ai(area: str, category: str, address: str = "", count: int
         f"推薦{count}款在「{location_str}」走路5分鐘內可到的手搖飲，類別={cat_str}。"
         f"必須是非常近的店家。繁體中文，僅回JSON："
         f'[{{"shop":"店名","drink":"品名","category":"類別",'
-        f'"tags":["標籤"],"description":"特色",'
+        f'"price": null, "tags":["標籤"],"description":"特色",'
         f'"image_url":"圖片URL或null"}}]'
+        # 不要憑空編價格：若不知道確切價格，請回 `null` 作為 price；不要估計或自行編價格。
     )
     raw = tea_query(prompt)
-    return _parse_json_list(raw)
+    items = _parse_json_list(raw)
+    return _tag_ai_price_source(items)
 
 
 def query_new_products_from_ai(area: str, address: str = "", count: int = 4) -> list[dict]:
@@ -83,11 +85,13 @@ def query_new_products_from_ai(area: str, address: str = "", count: int = 4) -> 
         f"搜尋「{location_str}」走路5分鐘內可到的手搖飲{count}款最新/季節限定新品。"
         f"必須是非常近的店家。繁體中文，僅回JSON："
         f'[{{"shop":"店名","drink":"品名","category":"類別",'
-        f'"tags":["新品"],"description":"特色",'
+        f'"price": null, "tags":["新品"],"description":"特色",'
         f'"image_url":"圖片URL或null"}}]'
+        # 不要憑空編價格：若不知道確切價格，請回 `null` 作為 price；不要估計或自行編價格。
     )
     raw = tea_query(prompt)
-    return _parse_json_list(raw)
+    items = _parse_json_list(raw)
+    return _tag_ai_price_source(items)
 
 
 def _parse_json_list(raw: str) -> list[dict]:
@@ -115,6 +119,16 @@ def _parse_json_list(raw: str) -> list[dict]:
     return []
 
 
+def _tag_ai_price_source(items: list[dict]) -> list[dict]:
+    """標記 AI 回傳的項目為來自 AI（price_source='ai'），以便前端顯示時可標註為估計或略過存入 DB。"""
+    for it in items:
+        if "price" in it and it.get("price") is not None:
+            it["price_source"] = "ai"
+        else:
+            it["price_source"] = None
+    return items
+
+
 # ─────────────────────────────────────────
 # Flex Message 建立
 # ─────────────────────────────────────────
@@ -129,6 +143,7 @@ def make_drink_carousel(drinks: list[dict], area: str) -> dict:
         tags_str      = "  ".join([f"#{t}" for t in (d.get("tags") or [])[:3]])
         postback_data = f"action=select_drink&idx={idx}"
         image_url     = d.get("image_url") or ""
+        price_text    = d.get("price") or d.get("price_text") or ""
         # 只接受 https:// 開頭的圖片 URL
         has_image = image_url.startswith("https://")
 
@@ -161,46 +176,80 @@ def make_drink_carousel(drinks: list[dict], area: str) -> dict:
             "paddingAll": "12px",
         }
 
+        # 顯示價格（若有），並標註來源：AI 提供的價格標為估計
+        price_val = d.get("price") or d.get("price_value")
+        price_block = []
+        price_text = ""
+        if price_val is not None:
+            try:
+                pv = float(price_val)
+                if pv.is_integer():
+                    price_text = f"💲 {int(pv)} 元"
+                else:
+                    price_text = f"💲 {pv:.2f} 元"
+            except Exception:
+                price_text = str(price_val)
+
+            # 若為 AI 回傳，標註為估計
+            if d.get("price_source") == "ai":
+                price_text = f"{price_text}（估計）"
+
+            price_block = [{
+                "type": "text",
+                "text": price_text,
+                "size": "sm",
+                "color": "#5C3A1E",
+            }]
+
+        body_contents = [
+            {
+                "type": "text",
+                "text": d.get("drink", "") or d.get("drink_name", ""),
+                "size": "xl",
+                "weight": "bold",
+                "color": "#5C3A1E",
+                "wrap": True,
+            },
+        ]
+        # 插入價格區塊（若有）
+        if price_block:
+            body_contents.extend(price_block)
+
+        body_contents.extend([
+            {
+                "type": "text",
+                "text": f"{d.get('category', '')}",
+                "size": "sm",
+                "color": "#9E7A5A",
+            },
+            {
+                "type": "text",
+                "text": tags_str,
+                "size": "xs",
+                "color": "#C97C3A",
+                "wrap": True,
+            },
+            {
+                "type": "separator",
+                "color": "#FFE0C0",
+                "margin": "sm",
+            },
+            {
+                "type": "text",
+                "text": d.get("description", ""),
+                "size": "xs",
+                "color": "#5C3A1E",
+                "wrap": True,
+            },
+        ])
+
         bubble["body"] = {
             "type": "box",
             "layout": "vertical",
             "spacing": "sm",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": d.get("drink", "") or d.get("drink_name", ""),
-                    "size": "xl",
-                    "weight": "bold",
-                    "color": "#5C3A1E",
-                    "wrap": True,
-                },
-                {
-                    "type": "text",
-                    "text": f"{d.get('category', '')}",
-                    "size": "sm",
-                    "color": "#9E7A5A",
-                },
-                {
-                    "type": "text",
-                    "text": tags_str,
-                    "size": "xs",
-                    "color": "#C97C3A",
-                    "wrap": True,
-                },
-                {
-                    "type": "separator",
-                    "color": "#FFE0C0",
-                    "margin": "sm",
-                },
-                {
-                    "type": "text",
-                    "text": d.get("description", ""),
-                    "size": "xs",
-                    "color": "#5C3A1E",
-                    "wrap": True,
-                },
-            ],
+            "contents": body_contents,
         }
+        # 不要在此重複插入價格（已在 body_contents 中處理）
 
         bubble["footer"] = {
             "type": "box",
