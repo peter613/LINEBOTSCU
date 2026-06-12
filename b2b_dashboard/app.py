@@ -50,9 +50,42 @@ if df.empty:
 # 解析 shop_name 的品牌
 def extract_brand(name: str):
     import re
-    if not name: return "未知"
+    if not name: return "未知店家"
+    
+    # 移除括號內的文字
     name = re.sub(r'\(.*?\)', '', name)
     name = re.sub(r'（.*?）', '', name)
+    
+    name_upper = name.upper()
+    
+    # 常見品牌正規化對照表 (只要包含該關鍵字，就統一為該品牌名)
+    brand_mapping = {
+        "五桐號": ["五桐", "WOOTEA"],
+        "50嵐": ["50嵐", "五十嵐"],
+        "可不可熟成紅茶": ["可不可"],
+        "麻古茶坊": ["麻古"],
+        "清心福全": ["清心"],
+        "茶湯會": ["茶湯會"],
+        "迷客夏": ["迷客夏"],
+        "大苑子": ["大苑子"],
+        "CoCo都可": ["COCO", "都可"],
+        "COMEBUY": ["COMEBUY"],
+        "先喝道": ["先喝道"],
+        "功夫茶": ["功夫茶"],
+        "侍茶匠": ["侍茶匠"],
+        "木子甜飲": ["木子甜飲"],
+        "初韻": ["初韻"],
+        "珍煮丹": ["珍煮丹"],
+        "一芳": ["一芳"],
+    }
+    
+    for canonical_name, keywords in brand_mapping.items():
+        for kw in keywords:
+            if kw.upper() in name_upper:
+                return canonical_name
+                
+    # 若不在對照表中，把常見分隔符號轉為空白後取第一段
+    name = name.replace('-', ' ').replace('_', ' ').replace('－', ' ')
     parts = name.split()
     return parts[0] if parts else name
 
@@ -135,16 +168,18 @@ else:
     brand_counts = df['brand'].value_counts().reset_index()
     brand_counts.columns = ['brand', 'select_count']
 
-brand_counts = brand_counts.sort_values(by='select_count', ascending=False)
+brand_counts = brand_counts.sort_values(by='select_count', ascending=False).reset_index(drop=True)
 brand_counts.columns = ['品牌名稱', '總被選擇次數']
 
-if len(brand_counts) > 20:
-    top_brands = brand_counts.head(20)
-    others_count = brand_counts.iloc[20:]['總被選擇次數'].sum()
-    others_df = pd.DataFrame([{'品牌名稱': '其他', '總被選擇次數': others_count}])
-    plot_df = pd.concat([top_brands, others_df], ignore_index=True)
-else:
-    plot_df = brand_counts
+# 判斷是否要歸類為「其他」：次數 <= 2，或是排名在第 20 名之後
+is_other = (brand_counts['總被選擇次數'] <= 2) | (brand_counts.index >= 20)
+others_count = brand_counts[is_other]['總被選擇次數'].sum()
+
+plot_df = brand_counts[~is_other].copy()
+
+if others_count > 0:
+    others_row = pd.DataFrame([{'品牌名稱': '其他', '總被選擇次數': others_count}])
+    plot_df = pd.concat([plot_df, others_row], ignore_index=True)
 
 fig_bar = px.bar(
     plot_df, x='品牌名稱', y='總被選擇次數',
