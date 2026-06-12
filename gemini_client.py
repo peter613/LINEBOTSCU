@@ -7,17 +7,30 @@ import os
 
 from google import genai
 from google.genai.types import GenerateContentConfig, GoogleSearch, Tool
+import random
 
-# === 初始化 Google Gemini ===
-GOOGLE_GEMINI_API_KEY = os.environ.get("GOOGLE_GEMINI_API_KEY")
-client = genai.Client(api_key=GOOGLE_GEMINI_API_KEY)
+# === 初始化 Google Gemini (支援多把 Key 輪詢) ===
+keys_str = os.environ.get("GOOGLE_GEMINI_API_KEYS", "")
+if keys_str:
+    API_KEYS = [k.strip() for k in keys_str.split(",") if k.strip()]
+else:
+    # 兼容舊版單一 key
+    API_KEYS = [os.environ.get("GOOGLE_GEMINI_API_KEY", "")]
+
+def get_client():
+    """隨機或輪詢取得一個 Gemini Client，以分散流量避免排隊和 Rate Limit。"""
+    key = random.choice(API_KEYS) if API_KEYS else ""
+    return genai.Client(api_key=key)
+
+# 建立預設 client 給全域 chat 使用
+client = get_client()
 
 # === Google Search 工具 ===
 google_search_tool = Tool(google_search=GoogleSearch())
 
 # === 多輪對話物件 (全域，維持對話記憶) ===
 chat = client.chats.create(
-    model="gemini-2.5-flash",
+    model="gemini-2.5-pro",
     config=GenerateContentConfig(
         system_instruction=(
             "你是手搖飲助理，嚴格用繁體中文回答。"
@@ -41,12 +54,14 @@ def tea_query(prompt: str) -> str:
     茶飲推薦專用 Gemini 查詢（獨立 session，帶 Google Search）。
     System instruction 指定為台灣手搖飲料專家角色。
     """
-    tea_chat = client.chats.create(
-        model="gemini-2.5-flash",
+    current_client = get_client()
+    tea_chat = current_client.chats.create(
+        model="gemini-2.5-pro",
         config=GenerateContentConfig(
             system_instruction=(
                 "你是台灣手搖飲達人，熟悉各大品牌菜單。"
                 "嚴格用繁體中文，簡潔回答(100字內)。"
+                "若搜尋不到確切資訊，回覆空 JSON 陣列 []，絕對不要編造不存在的店家或飲品。"
             ),
             tools=[google_search_tool],
             response_modalities=["TEXT"],

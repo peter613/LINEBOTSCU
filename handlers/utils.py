@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # 位置請求
 # ─────────────────────────────────────────
 
-def ask_for_location(event, feature_label: str = "推薦") -> None:
+def ask_for_location(event, message: str = "📍 請分享您的位置！") -> None:
     """
     傳送 Quick Reply 位置按鈕，引導使用者分享位置。
     使用者點按鈕後 LINE 自動開啟地圖，不需手動輸入文字。
@@ -38,10 +38,10 @@ def ask_for_location(event, feature_label: str = "推薦") -> None:
                 reply_token=event.reply_token,
                 messages=[
                     TextMessage(
-                        text=f"📍 為了提供您附近的{feature_label}，請先分享您的位置！",
+                        text=message,
                         quick_reply=QuickReply(items=[
                             QuickReplyItem(
-                                action=LocationAction(label="📍 傳送我的位置")
+                                action=LocationAction(label="📍 分享位置")
                             )
                         ]),
                     )
@@ -64,11 +64,14 @@ def query_drinks_from_ai(area: str, category: str, address: str = "", count: int
     location_str = address if address else area
 
     prompt = (
-        f"推薦{count}款在「{location_str}」走路5分鐘內可到的手搖飲，類別={cat_str}。"
-        f"必須是非常近的店家。繁體中文，僅回JSON："
+        f"我現在人在「{location_str}」，請用 Google 搜尋，推薦{count}款我步行10分鐘內可到的手搖飲料店的飲品，類別={cat_str}。\n"
+        f"【嚴格規定】\n"
+        f"1. 必須用 Google 地圖確認該店家距離「{location_str}」在 1 公里（步行 10 分鐘）以內！嚴禁推薦距離太遠的店家！若超過 1 公里請絕對不要推薦。\n"
+        f"2. 絕對不可以推薦不同城市或不同區域的店家。\n"
+        f"3. 如果搜尋後發現附近沒有符合條件的手搖飲料店，請直接回覆空 JSON 陣列 []，絕對不要編造。\n"
+        f"繁體中文，僅回JSON：\n"
         f'[{{"shop":"店名","drink":"品名","category":"類別",'
-        f'"tags":["標籤"],"description":"特色",'
-        f'"image_url":"圖片URL或null"}}]'
+        f'"tags":["標籤"],"description":"特色"}}]\n'
     )
     raw = tea_query(prompt)
     return _parse_json_list(raw)
@@ -80,11 +83,14 @@ def query_new_products_from_ai(area: str, address: str = "", count: int = 4) -> 
     """
     location_str = address if address else area
     prompt = (
-        f"搜尋「{location_str}」走路5分鐘內可到的手搖飲{count}款最新/季節限定新品。"
-        f"必須是非常近的店家。繁體中文，僅回JSON："
-        f'[{{"shop":"店名","drink":"品名","category":"類別",'
-        f'"tags":["新品"],"description":"特色",'
-        f'"image_url":"圖片URL或null"}}]'
+        f"我現在人在「{location_str}」，請用 Google 搜尋，找出各大手搖連鎖品牌（不需要限定在我附近）的{count}款最新/季節限定新品。\n"
+        f"【嚴格規定】\n"
+        f"1. 請推薦全台灣知名連鎖品牌（例如五十嵐、麻古、清心等）的最新主打商品。\n"
+        f"2. 因為不需要限定在使用者附近，所以不需要回報特定的分店名稱，只要給品牌名稱即可。\n"
+        f"3. 如果找不到真實的新品，請直接回覆空 JSON 陣列 []，絕對不要編造。\n"
+        f"繁體中文，僅回JSON：\n"
+        f'[{{"brand":"品牌名稱","drink":"品名","category":"類別",'
+        f'"tags":["新品"],"description":"特色"}}]\n'
     )
     raw = tea_query(prompt)
     return _parse_json_list(raw)
@@ -119,40 +125,40 @@ def _parse_json_list(raw: str) -> list[dict]:
 # Flex Message 建立
 # ─────────────────────────────────────────
 
-def make_drink_carousel(drinks: list[dict], area: str) -> dict:
+def make_drink_carousel(drinks: list[dict], area: str, user_id: str = "", is_fallback: bool = False) -> dict:
     """
     建立飲品推薦 Flex Carousel。
-    每張卡片含 hero 圖片（若有 image_url）和「✅ 選這個！」按鈕。
+    is_fallback: 若為 True，代表是資料庫抓出的驚喜名單，需要過濾掉原本存的分店名稱，只保留品牌名。
     """
+    import urllib.parse
+
     bubbles = []
     for idx, d in enumerate(drinks):
         tags_str      = "  ".join([f"#{t}" for t in (d.get("tags") or [])[:3]])
+        
         postback_data = f"action=select_drink&idx={idx}"
-        image_url     = d.get("image_url") or ""
-        # 只接受 https:// 開頭的圖片 URL
-        has_image = image_url.startswith("https://")
+
+        # 處理店名：若是備援名單或要求只顯示品牌，過濾分店名
+        shop_text = d.get("shop", "") or d.get("shop_name", "") or d.get("brand", "")
+        if is_fallback:
+            import re
+            shop_text = re.sub(r'\(.*?\)', '', shop_text)
+            shop_text = re.sub(r'（.*?）', '', shop_text)
+            shop_text = shop_text.split()[0] if shop_text.split() else shop_text
+
+        postback_data = f"action=select_drink&idx={idx}"
 
         bubble: dict = {
             "type": "bubble",
             "size": "kilo",
         }
 
-        # ── Hero 圖片（有圖才加）──
-        if has_image:
-            bubble["hero"] = {
-                "type": "image",
-                "url": image_url,
-                "size": "full",
-                "aspectRatio": "20:13",
-                "aspectMode": "cover",
-            }
-
         bubble["header"] = {
             "type": "box",
             "layout": "vertical",
             "contents": [{
                 "type": "text",
-                "text": d.get("shop", "") or d.get("shop_name", ""),
+                "text": shop_text,
                 "size": "sm",
                 "weight": "bold",
                 "color": "#FFFFFF",
@@ -209,9 +215,9 @@ def make_drink_carousel(drinks: list[dict], area: str) -> dict:
                 "type": "button",
                 "action": {
                     "type": "postback",
-                    "label": "✅ 選這個！",
+                    "label": "🔗 點我進官網",
                     "data": postback_data,
-                    "displayText": f"我選了 {d.get('drink', '') or d.get('drink_name', '')}！",
+                    "displayText": f"我選了 {d.get('shop', '') or d.get('shop_name', '')}！",
                 },
                 "style": "primary",
                 "color": "#FF8C42",

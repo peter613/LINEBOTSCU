@@ -26,8 +26,8 @@ HEADERS = {
 RICH_MENU_BODY = {
     "size": {"width": 2500, "height": 1686},
     "selected": True,
-    "name": "LINEBOTSCU 茶飲選單",
-    "chatBarText": "🧋 茶飲選單",
+    "name": "功能選單",
+    "chatBarText": "功能選單",
     "areas": [
         # 左上：條件找茶
         {
@@ -80,7 +80,7 @@ def upload_rich_menu_image(rich_menu_id: str, image_path: str) -> None:
     url = f"https://api-data.line.me/v2/bot/richmenu/{rich_menu_id}/content"
     headers = {
         "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}",
-        "Content-Type": "image/png",
+        "Content-Type": "image/jpeg",
     }
     with open(image_path, "rb") as f:
         res = requests.post(url, headers=headers, data=f)
@@ -112,60 +112,55 @@ def delete_all_rich_menus() -> None:
 
 def generate_rich_menu_image() -> str:
     """
-    使用 Pillow 生成仿照設計圖的 2×2 圖文選單圖片（彩色框+文字）。
+    使用 Pillow 將四張圖片拼接成 2×2 圖文選單圖片 (2500x1686)。
     回傳：圖片檔案路徑
     """
     try:
-        from PIL import Image, ImageDraw, ImageFont
+        from PIL import Image
     except ImportError:
         print("⚠️  Pillow 未安裝，跳過圖片生成，請手動上傳圖片。")
         return ""
 
     W, H = 2500, 1686
-    COLOR_BG = "#FDFBF5"  # 米白底色
-    COLOR_DIVIDER = "#9AB0C4"  # 灰藍色分隔線
-    COLOR_TEXT = "#2C1B10"     # 深咖啡字體
-    
-    img = Image.new("RGB", (W, H), color=COLOR_BG)
-    draw = ImageDraw.Draw(img)
+    img = Image.new("RGB", (W, H), color="#FFFFFF")
 
-    # 畫四個格子：圖示(暫代) / 標題
+    # 圖片對應與路徑 (請確認路徑與名稱)
+    brain_dir = r"C:\Users\Lynn610\.gemini\antigravity\brain\2db2abe5-5291-40e3-9e81-e74daf848fbf"
+    
+    # 根據順序推測的圖片對應：
+    # 條件找茶 (左上)
+    img_tl = os.path.join(brain_dir, "media__1780388295684.jpg")
+    # 海豹隨機推 (右上)
+    img_tr = os.path.join(brain_dir, "media__1780388295664.jpg")
+    # 最新主打 (左下)
+    img_bl = os.path.join(brain_dir, "media__1780388295624.jpg")
+    # 使用說明 (右下)
+    img_br = os.path.join(brain_dir, "media__1780388295643.jpg")
+
     cells = [
-        (0,    0,    1250, 843,  "🔍", "條件找茶"),
-        (1250, 0,    2500, 843,  "🎲", "海豹隨機推"),
-        (0,    843,  1250, 1686, "🔥", "最新主打"),
-        (1250, 843,  2500, 1686, "⭐", "使用說明"),
+        (img_tl, 0, 0),
+        (img_tr, 1250, 0),
+        (img_bl, 0, 843),
+        (img_br, 1250, 843)
     ]
 
-    try:
-        font_title = ImageFont.truetype("C:/Windows/Fonts/msjh.ttc", 80)
-        font_icon  = ImageFont.truetype("C:/Windows/Fonts/seguiemj.ttf", 350)
-    except Exception:
-        font_title = ImageFont.load_default()
-        font_icon  = font_title
+    for path, x, y in cells:
+        if os.path.exists(path):
+            try:
+                cell_img = Image.open(path).convert("RGB")
+                cell_img = cell_img.resize((1250, 843), Image.Resampling.LANCZOS)
+                img.paste(cell_img, (x, y))
+            except Exception as e:
+                print(f"處理圖片 {path} 失敗: {e}")
+        else:
+            print(f"找不到圖片: {path}")
 
-    for (x1, y1, x2, y2, icon, title) in cells:
-        cx = (x1 + x2) // 2
-        cy = (y1 + y2) // 2
-
-        # icon（中央偏上）
-        draw.text((cx, cy - 100), icon, fill="#555555", font=font_icon, anchor="mm")
-        # 標題（中央偏下）
-        draw.text((cx, cy + 220), title, fill=COLOR_TEXT, font=font_title, anchor="mm")
-
-    # 分隔線 (十字)
-    draw.line([(1250, 0), (1250, H)], fill=COLOR_DIVIDER, width=12)
-    draw.line([(0, 843), (W, 843)], fill=COLOR_DIVIDER, width=12)
-    
-    # 畫四周的邊框
-    draw.rectangle([0, 0, W, H], outline=COLOR_DIVIDER, width=12)
-
-    # 儲存
+    # 儲存為 JPEG 以縮小檔案大小 (< 1MB)
     out_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "rich_menu.png"
+        os.path.dirname(os.path.abspath(__file__)), "rich_menu.jpg"
     )
-    img.save(out_path)
-    print(f"✅ 圖片生成完成：{out_path}")
+    img.save(out_path, format="JPEG", quality=80)
+    print(f"✅ 圖片拼接完成：{out_path}")
     return out_path
 
 

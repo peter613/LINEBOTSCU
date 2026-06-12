@@ -17,6 +17,7 @@ from linebot.v3.messaging import (
     TextMessage,
 )
 from linebot.v3.webhooks import (
+    FollowEvent,
     MessageEvent,
     TextMessageContent,
     LocationMessageContent,
@@ -72,10 +73,47 @@ def handle_location_message(event):
         condition_tea.on_location_received(event, user_id, lat, lng, address)
     elif feature == FEATURE_RANDOM:
         random_seal.on_location_received(event, user_id, lat, lng, address)
-    elif feature == FEATURE_NEW:
-        new_products.on_location_received(event, user_id, lat, lng, address, ctx)
     else:
         reset_user_session(user_id)
+
+
+# ─────────────────────────────────────────
+# 加入好友 Handler
+# ─────────────────────────────────────────
+
+@webhook_handler.add(FollowEvent)
+def handle_follow(event):
+    """使用者加入好友時發送歡迎訊息。"""
+    from linebot.v3.messaging import ApiClient, MessagingApi, ReplyMessageRequest, TextMessage
+    user_id = event.source.user_id
+
+    # 嘗試取得使用者名稱
+    display_name = ""
+    try:
+        with ApiClient(line_configuration) as api_client:
+            profile = MessagingApi(api_client).get_profile(user_id)
+            display_name = profile.display_name
+    except Exception:
+        pass
+
+    greeting = f"哈囉 {display_name}！" if display_name else "哈囉！"
+
+    welcome_text = (
+        f"{greeting}👋 很高興認識您～\n"
+        f"我是您的專屬「飲料推薦小幫手」🥤\n"
+        f"超級感謝您把我加入好友！"
+        f"以後不管是下午茶想來點咀嚼感，還是需要清爽解渴，"
+        f"我都會第一時間為您送上最新的必喝情報喔\n"
+        f"準備好迎接滿滿的飲料驚喜了嗎？敬請期待啦！"
+    )
+
+    with ApiClient(line_configuration) as api_client:
+        MessagingApi(api_client).reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=welcome_text)],
+            )
+        )
 
 
 # ─────────────────────────────────────────
@@ -110,6 +148,17 @@ def handle_text_message(event):
         return
 
     # ── 步驟 2：功能關鍵字路由 ───────────────────────
+    from linebot.v3.messaging import ApiClient, MessagingApi, ReplyMessageRequest, TextMessage
+    from config import line_configuration
+    if user_input in ["你好", "您好", "hi", "嗨", "hello"]:
+        with ApiClient(line_configuration) as api_client:
+            MessagingApi(api_client).reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text="您好！需要找飲料的話，請直接點選下方選單喔！")]
+                )
+            )
+        return
 
     if any(kw in user_input for kw in KEYWORDS_CONDITION):
         condition_tea.trigger(event, user_id)

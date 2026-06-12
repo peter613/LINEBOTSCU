@@ -36,6 +36,7 @@ def upsert_drink(
     category: str,
     tags: list[str],
     area: str,
+    price: float | None = None,
 ) -> dict:
     """
     新增或更新飲品紀錄。
@@ -57,13 +58,16 @@ def upsert_drink(
     if res.data:
         row_id = res.data[0]["id"]
         new_count = res.data[0]["select_count"] + 1
-        sb.table("drinks").update({
+        payload = {
             "select_count": new_count,
             "updated_at": now,
-        }).eq("id", row_id).execute()
+        }
+        if price is not None:
+            payload["price"] = price
+        sb.table("drinks").update(payload).eq("id", row_id).execute()
         logger.info("Updated drink '%s' @ '%s', count=%d", drink_name, shop_name, new_count)
     else:
-        sb.table("drinks").insert({
+        row = {
             "shop_name":    shop_name,
             "drink_name":   drink_name,
             "category":     category,
@@ -72,7 +76,10 @@ def upsert_drink(
             "select_count": 1,
             "created_at":   now,
             "updated_at":   now,
-        }).execute()
+        }
+        if price is not None:
+            row["price"] = price
+        sb.table("drinks").insert(row).execute()
         logger.info("Inserted new drink '%s' @ '%s'", drink_name, shop_name)
 
     return {"shop_name": shop_name, "drink_name": drink_name}

@@ -18,6 +18,7 @@ CREATE TABLE drinks (
     tags         TEXT[],                 -- 標籤陣列
     area         TEXT,                   -- 所在區域（如：台北市中山區）
     select_count INTEGER DEFAULT 1,      -- 被使用者選擇次數（熱門度）
+    price        NUMERIC(8,2),           -- 飲品價格（可選）
     created_at   TIMESTAMPTZ DEFAULT NOW(),
     updated_at   TIMESTAMPTZ DEFAULT NOW()
 );
@@ -41,3 +42,6 @@ ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "drinks_all"   ON drinks        FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "sessions_all" ON user_sessions FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- ── 若資料庫已存在，僅需新增 price 欄位，請執行以下指令：──
+-- ALTER TABLE drinks ADD COLUMN IF NOT EXISTS price NUMERIC(8,2);

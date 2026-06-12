@@ -94,7 +94,9 @@ def _handle_select_drink(event, user_id: str, params: dict) -> None:
         area=area,
     )
 
-    reset_user_session(user_id)
+    import urllib.parse
+    search_query = f"{shop_name} {drink_name} {area} 飲料"
+    website_url = f"https://www.google.com/search?q={urllib.parse.quote(search_query)}"
 
     with ApiClient(line_configuration) as api_client:
         MessagingApi(api_client).reply_message(
@@ -102,10 +104,9 @@ def _handle_select_drink(event, user_id: str, params: dict) -> None:
                 reply_token=event.reply_token,
                 messages=[TextMessage(
                     text=(
-                        f"✅ 已記錄！\n\n"
-                        f"🏪 {shop_name}\n"
-                        f"🍵 {drink_name}\n\n"
-                        f"下次「🦭 隨機推」會把它列入候選喔！"
+                        f"✅ 已為您存入喜好資料庫！\n\n"
+                        f"👇 請點擊下方連結前往搜尋：\n"
+                        f"點我: {website_url}"
                     )
                 )],
             )
@@ -113,12 +114,10 @@ def _handle_select_drink(event, user_id: str, params: dict) -> None:
 
 
 # ─────────────────────────────────────────
-# 靜態媒體 / 健康檢查 / Webhook
+# 跳轉中繼站與靜態媒體 / 健康檢查 / Webhook
 # ─────────────────────────────────────────
 
-@app.route("/images/<filename>")
-def serve_media(filename):
-    return send_from_directory(static_tmp_path, filename)
+
 
 
 @app.route("/", methods=["GET"])
