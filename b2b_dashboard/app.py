@@ -127,13 +127,29 @@ with col2:
 st.markdown("---")
 
 st.subheader("📈 飲料品牌受歡迎程度 (柱狀圖)")
-brand_counts = df['brand'].value_counts().reset_index()
-brand_counts.columns = ['品牌名稱', '被選擇次數']
-top_brands = brand_counts.head(20)
+# 使用 select_count 來計算總點擊次數，而不只是不重複的飲料數量
+if 'select_count' in df.columns:
+    df['select_count'] = df['select_count'].fillna(1).astype(int)
+    brand_counts = df.groupby('brand')['select_count'].sum().reset_index()
+else:
+    brand_counts = df['brand'].value_counts().reset_index()
+    brand_counts.columns = ['brand', 'select_count']
+
+brand_counts = brand_counts.sort_values(by='select_count', ascending=False)
+brand_counts.columns = ['品牌名稱', '總被選擇次數']
+
+if len(brand_counts) > 20:
+    top_brands = brand_counts.head(20)
+    others_count = brand_counts.iloc[20:]['總被選擇次數'].sum()
+    others_df = pd.DataFrame([{'品牌名稱': '其他', '總被選擇次數': others_count}])
+    plot_df = pd.concat([top_brands, others_df], ignore_index=True)
+else:
+    plot_df = brand_counts
 
 fig_bar = px.bar(
-    top_brands, x='品牌名稱', y='被選擇次數',
-    color='被選擇次數', color_continuous_scale='Blues'
+    plot_df, x='品牌名稱', y='總被選擇次數',
+    color='總被選擇次數', color_continuous_scale='Blues',
+    text_auto=True
 )
 st.plotly_chart(fig_bar, use_container_width=True)
 
