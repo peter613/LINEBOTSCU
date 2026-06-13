@@ -64,13 +64,13 @@ def query_drinks_from_ai(area: str, category: str, address: str = "", count: int
     location_str = address if address else area
 
     prompt = (
-        f"我現在人在「{location_str}」，請用 Google 搜尋，推薦{count}款我步行10分鐘內可到的手搖飲料店的飲品，類別={cat_str}。\n"
-        f"【嚴格規定】\n"
-        f"1. 必須用 Google 地圖確認該店家距離「{location_str}」在 1 公里（步行 10 分鐘）以內！嚴禁推薦距離太遠的店家！若超過 1 公里請絕對不要推薦。\n"
-        f"2. 絕對不可以推薦不同城市或不同區域的店家。\n"
-        f"3. 如果搜尋後發現附近沒有符合條件的手搖飲料店，請直接回覆空 JSON 陣列 []，絕對不要編造。\n"
+        f"我現在人在「{location_str}」，請用 Google 搜尋，推薦{count}款附近（步行距離佳）的手搖飲料店的飲品，類別={cat_str}。\n"
+        f"【規定】\n"
+        f"1. 必須是「{location_str}」附近實際存在的店家，請盡量推薦步行可到的手搖飲料店。\n"
+        f"2. 若附近真的沒飲料店，稍微遠一點點的同行政區店家也可以，不要輕易回傳空陣列。\n"
+        f"3. 為了版面整潔，回傳的「shop」欄位【只能填寫品牌名稱】，絕對不可以包含分店名稱！(例如只能填「清心福全」，不可填「清心福全 士林店」)。\n"
         f"繁體中文，僅回JSON：\n"
-        f'[{{"shop":"店名","drink":"品名","category":"類別",'
+        f'[{{"shop":"品牌名稱","drink":"品名","category":"類別",'
         f'"tags":["標籤"],"description":"特色"}}]\n'
     )
     raw = tea_query(prompt)
@@ -138,15 +138,13 @@ def make_drink_carousel(drinks: list[dict], area: str, user_id: str = "", is_fal
         
         postback_data = f"action=select_drink&idx={idx}"
 
-        # 處理店名：若是備援名單或要求只顯示品牌，過濾分店名
+        # 處理店名：無條件過濾分店名，確保不會出現地名
         shop_text = d.get("shop", "") or d.get("shop_name", "") or d.get("brand", "")
-        if is_fallback:
-            import re
-            shop_text = re.sub(r'\(.*?\)', '', shop_text)
-            shop_text = re.sub(r'（.*?）', '', shop_text)
-            shop_text = shop_text.split()[0] if shop_text.split() else shop_text
-
-        postback_data = f"action=select_drink&idx={idx}"
+        import re
+        shop_text = re.sub(r'\(.*?\)', '', shop_text)
+        shop_text = re.sub(r'（.*?）', '', shop_text)
+        shop_text = shop_text.replace('-', ' ').replace('_', ' ').replace('－', ' ')
+        shop_text = shop_text.split()[0] if shop_text.split() else shop_text
 
         bubble: dict = {
             "type": "bubble",
