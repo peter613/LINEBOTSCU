@@ -215,7 +215,7 @@ def make_drink_carousel(drinks: list[dict], area: str, user_id: str = "", is_fal
                     "type": "postback",
                     "label": "🔗 點我進官網",
                     "data": postback_data,
-                    "displayText": f"我選了 {d.get('shop', '') or d.get('shop_name', '')}！",
+                    "displayText": f"我選了 {shop_text}！",
                 },
                 "style": "primary",
                 "color": "#FF8C42",

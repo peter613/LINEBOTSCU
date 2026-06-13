@@ -82,6 +82,14 @@ def _handle_select_drink(event, user_id: str, params: dict) -> None:
 
     # 相容 AI 回傳格式（shop/drink）與 DB 格式（shop_name/drink_name）
     shop_name  = drink.get("shop_name") or drink.get("shop", "未知店家")
+    
+    # 強制過濾所有分店地名，確保存入資料庫與後續回覆都沒有分店名稱
+    import re
+    shop_name = re.sub(r'\(.*?\)', '', shop_name)
+    shop_name = re.sub(r'（.*?）', '', shop_name)
+    shop_name = shop_name.replace('-', ' ').replace('_', ' ').replace('－', ' ')
+    shop_name = shop_name.split()[0] if shop_name.split() else shop_name
+
     drink_name = drink.get("drink_name") or drink.get("drink", "未知飲品")
     category   = drink.get("category", "")
     tags       = drink.get("tags") or []
